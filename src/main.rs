@@ -233,26 +233,22 @@ fn add_page_to_pdf(
     width_mm: f32,
     height_mm: f32,
 ) -> Result<()> {
-    // Convert pixel data to an image
     let img: ImageBuffer<Rgb<u8>, Vec<u8>> =
         ImageBuffer::from_raw(page.width as u32, page.height as u32, page.pixels.clone())
             .context("Failed to create image from pixel data")?;
 
-    // Convert to DynamicImage
     let dynamic_img = DynamicImage::ImageRgb8(img);
-
-    // Create an image object for the PDF
     let image = Image::from_dynamic_image(&dynamic_img);
 
-    // Add the image to the page
     let layer = doc.get_page(*page_index).get_layer(*layer_index);
     image.add_to_layer(
         layer.clone(),
         ImageTransform {
             translate_x: Some(Mm(0.0)),
             translate_y: Some(Mm(0.0)),
-            scale_x: Some(width_mm / (page.width as f32)),
-            scale_y: Some(height_mm / (page.height as f32)),
+            scale_x: Some(Mm(width_mm).0),
+            scale_y: Some(Mm(height_mm).0),
+            dpi: Some(DPI),
             ..Default::default()
         },
     );
