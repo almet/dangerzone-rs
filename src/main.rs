@@ -446,7 +446,7 @@ mod tests {
         
         // Verify PDF structure
         let pdf_data = buffer.into_inner();
-        assert!(pdf_data.len() > 0, "PDF should have data");
+        assert!(!pdf_data.is_empty(), "PDF should have data");
         
         // Check PDF header
         let header = String::from_utf8_lossy(&pdf_data[0..9]);
