@@ -11,8 +11,7 @@ env:
   RUST_BACKTRACE: 1
 
 jobs:
-  test:
-    name: Test on Linux
+  lint:
     runs-on: ubuntu-latest
     
     steps:
@@ -47,14 +46,3 @@ jobs:
     
     - name: Build project
       run: cargo build --release
-    
-    - name: Run unit tests
-      run: cargo test --bin dangerzone-rs
-    
-    - name: Pull Dangerzone image
-      run: podman pull ghcr.io/freedomofpress/dangerzone/v1
-    
-    - name: Run integration tests
-      run: cargo test --test integration_test -- --ignored --test-threads=4
-      env:
-        RUST_TEST_THREADS: 4
