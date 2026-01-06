@@ -20,7 +20,7 @@ in the original document.
 
 ## Why is this a good thing?
 
-The main goal is to have both a library and a small binary (< 2MB) that runs on top of
+The main goal is to have both a library and a small binary (1.2MB) that runs on top of
 podman to do conversions. Additionally, unlike other implementations, this this
 doesn't rely on external PDF libraries like `muPDF`. Instead, it manually
 constructs PDFs following the PDF 1.4 specification.
