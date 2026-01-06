@@ -440,10 +440,26 @@ fn apply_ocr_macos(input_pdf: &str, output_pdf: &str) -> Result<()> {
         anyhow::bail!("macOS OCR script not found at {:?}", script_path);
     }
 
+    // Convert input and output paths to absolute paths
+    // The Swift script requires absolute paths for the file:// URL scheme
+    let input_absolute = std::fs::canonicalize(input_pdf)
+        .with_context(|| format!("Failed to get absolute path for input: {}", input_pdf))?;
+    let output_absolute = std::path::Path::new(output_pdf)
+        .canonicalize()
+        .unwrap_or_else(|_| {
+            // If output doesn't exist yet, make parent dir absolute and append filename
+            let output_path = std::path::Path::new(output_pdf);
+            if output_path.is_absolute() {
+                output_path.to_path_buf()
+            } else {
+                std::env::current_dir().unwrap().join(output_path)
+            }
+        });
+
     let output = Command::new("swift")
         .arg(&script_path)
-        .arg(input_pdf)
-        .arg(output_pdf)
+        .arg(&input_absolute)
+        .arg(&output_absolute)
         .output()
         .context("Failed to execute Swift OCR script")?;
 
