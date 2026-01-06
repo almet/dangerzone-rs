@@ -1,5 +1,7 @@
 use anyhow::{Context, Result};
 use clap::Parser;
+use flate2::write::ZlibEncoder;
+use flate2::Compression;
 use std::fs::File;
 use std::io::{Read, Write};
 use std::process::{Command, Stdio};
@@ -266,10 +268,19 @@ fn write_pdf<W: Write>(writer: &mut W, pages: &[PageData]) -> Result<()> {
         pdf_data.extend_from_slice(format!("/Height {}\n", page.height).as_bytes());
         pdf_data.extend_from_slice(b"/ColorSpace /DeviceRGB\n");
         pdf_data.extend_from_slice(b"/BitsPerComponent 8\n");
-        pdf_data.extend_from_slice(format!("/Length {}\n", page.pixels.len()).as_bytes());
+
+        // Compress pixel data using Flate compression
+        let mut encoder = ZlibEncoder::new(Vec::new(), Compression::default());
+        encoder
+            .write_all(&page.pixels)
+            .context("Failed to compress pixel data")?;
+        let compressed_pixels = encoder.finish().context("Failed to finish compression")?;
+
+        pdf_data.extend_from_slice(b"/Filter /FlateDecode\n");
+        pdf_data.extend_from_slice(format!("/Length {}\n", compressed_pixels.len()).as_bytes());
         pdf_data.extend_from_slice(b">>\n");
         pdf_data.extend_from_slice(b"stream\n");
-        pdf_data.extend_from_slice(&page.pixels);
+        pdf_data.extend_from_slice(&compressed_pixels);
         pdf_data.extend_from_slice(b"\nendstream\n");
         pdf_data.extend_from_slice(b"endobj\n");
     }
@@ -487,6 +498,70 @@ mod tests {
         assert!(
             trailer.contains("/Type /XObject"),
             "PDF should have image object"
+        );
+
+        // Verify that compression is being used
+        assert!(
+            trailer.contains("/Filter /FlateDecode"),
+            "PDF should use Flate compression for images"
+        );
+    }
+
+    #[test]
+    fn test_pdf_compression_reduces_size() {
+        use std::io::Cursor;
+
+        // Create a larger test page with repetitive pattern (highly compressible)
+        let width = 100u16;
+        let height = 100u16;
+        let mut pixels = Vec::new();
+
+        // Fill with repetitive pattern - all red pixels (highly compressible)
+        for _ in 0..(width * height) {
+            pixels.push(255); // R
+            pixels.push(0); // G
+            pixels.push(0); // B
+        }
+
+        let page = PageData {
+            width,
+            height,
+            pixels: pixels.clone(),
+        };
+        let pages = vec![page];
+
+        // Write PDF to a buffer
+        let mut buffer = Cursor::new(Vec::new());
+        let result = write_pdf(buffer.get_mut(), &pages);
+        assert!(result.is_ok(), "PDF generation should succeed");
+
+        let pdf_data = buffer.into_inner();
+
+        // The uncompressed pixel data is 100x100x3 = 30,000 bytes
+        let uncompressed_pixel_size = pixels.len();
+        assert_eq!(uncompressed_pixel_size, 30000);
+
+        // The total PDF with compression should be significantly smaller than
+        // if we had embedded the raw pixel data plus PDF structure overhead
+        // With compression, repetitive data should compress to a fraction of the original
+        // We expect the compressed data to be much smaller than the raw pixels
+        let estimated_uncompressed_pdf_size = uncompressed_pixel_size + 1000; // PDF overhead
+
+        eprintln!("PDF size with compression: {} bytes", pdf_data.len());
+        eprintln!(
+            "Estimated uncompressed size: {} bytes",
+            estimated_uncompressed_pdf_size
+        );
+        eprintln!(
+            "Compression ratio: {:.2}%",
+            (pdf_data.len() as f32 / estimated_uncompressed_pdf_size as f32) * 100.0
+        );
+
+        // For highly repetitive data like this, compression should reduce size significantly
+        // We expect at least 50% reduction for repetitive patterns
+        assert!(
+            pdf_data.len() < estimated_uncompressed_pdf_size / 2,
+            "PDF with compression should be significantly smaller than uncompressed"
         );
     }
 }
