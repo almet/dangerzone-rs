@@ -188,14 +188,14 @@ fn write_pdf<W: Write>(writer: &mut W, pages: &[PageData]) -> Result<()> {
     // 2. Objects (catalog, pages, page objects, image objects)
     // 3. Cross-reference table (xref)
     // 4. Trailer
-    
+
     let mut pdf_data = Vec::new();
     let mut object_offsets = Vec::new();
-    
+
     // PDF Header
     pdf_data.extend_from_slice(b"%PDF-1.4\n");
     pdf_data.extend_from_slice(b"%\xE2\xE3\xCF\xD3\n"); // Binary comment for compatibility
-    
+
     // Object 1: Catalog
     object_offsets.push(pdf_data.len());
     pdf_data.extend_from_slice(b"1 0 obj\n");
@@ -204,13 +204,13 @@ fn write_pdf<W: Write>(writer: &mut W, pages: &[PageData]) -> Result<()> {
     pdf_data.extend_from_slice(b"/Pages 2 0 R\n");
     pdf_data.extend_from_slice(b">>\n");
     pdf_data.extend_from_slice(b"endobj\n");
-    
+
     // Object 2: Pages (parent)
     object_offsets.push(pdf_data.len());
     pdf_data.extend_from_slice(b"2 0 obj\n");
     pdf_data.extend_from_slice(b"<<\n");
     pdf_data.extend_from_slice(b"/Type /Pages\n");
-    
+
     // Build kids array
     let mut kids = String::from("/Kids [");
     for i in 0..pages.len() {
@@ -218,38 +218,44 @@ fn write_pdf<W: Write>(writer: &mut W, pages: &[PageData]) -> Result<()> {
     }
     kids.push_str("]\n");
     pdf_data.extend_from_slice(kids.as_bytes());
-    
+
     pdf_data.extend_from_slice(format!("/Count {}\n", pages.len()).as_bytes());
     pdf_data.extend_from_slice(b">>\n");
     pdf_data.extend_from_slice(b"endobj\n");
-    
+
     // For each page, create a Page object and an Image XObject
     for (page_idx, page) in pages.iter().enumerate() {
         eprintln!("Adding page {} to PDF...", page_idx + 1);
-        
+
         // Convert pixels to points (1 point = 1/72 inch)
         let width_pts = (page.width as f32) / DPI * 72.0;
         let height_pts = (page.height as f32) / DPI * 72.0;
-        
+
         // Page object
         let page_obj_num = 3 + page_idx * 2;
         let image_obj_num = page_obj_num + 1;
-        
+
         object_offsets.push(pdf_data.len());
         pdf_data.extend_from_slice(format!("{} 0 obj\n", page_obj_num).as_bytes());
         pdf_data.extend_from_slice(b"<<\n");
         pdf_data.extend_from_slice(b"/Type /Page\n");
         pdf_data.extend_from_slice(b"/Parent 2 0 R\n");
-        pdf_data.extend_from_slice(format!("/MediaBox [0 0 {:.2} {:.2}]\n", width_pts, height_pts).as_bytes());
+        pdf_data.extend_from_slice(
+            format!("/MediaBox [0 0 {:.2} {:.2}]\n", width_pts, height_pts).as_bytes(),
+        );
         pdf_data.extend_from_slice(b"/Resources <<\n");
-        pdf_data.extend_from_slice(format!("  /XObject << /Im{} {} 0 R >>\n", page_idx, image_obj_num).as_bytes());
+        pdf_data.extend_from_slice(
+            format!("  /XObject << /Im{} {} 0 R >>\n", page_idx, image_obj_num).as_bytes(),
+        );
         pdf_data.extend_from_slice(b">>\n");
-        
+
         // Reference to content stream object
-        pdf_data.extend_from_slice(format!("/Contents {} 0 R\n", 3 + pages.len() * 2 + page_idx).as_bytes());
+        pdf_data.extend_from_slice(
+            format!("/Contents {} 0 R\n", 3 + pages.len() * 2 + page_idx).as_bytes(),
+        );
         pdf_data.extend_from_slice(b">>\n");
         pdf_data.extend_from_slice(b"endobj\n");
-        
+
         // Image XObject
         object_offsets.push(pdf_data.len());
         pdf_data.extend_from_slice(format!("{} 0 obj\n", image_obj_num).as_bytes());
@@ -267,15 +273,18 @@ fn write_pdf<W: Write>(writer: &mut W, pages: &[PageData]) -> Result<()> {
         pdf_data.extend_from_slice(b"\nendstream\n");
         pdf_data.extend_from_slice(b"endobj\n");
     }
-    
+
     // Content stream objects for each page
     for (page_idx, page) in pages.iter().enumerate() {
         let width_pts = (page.width as f32) / DPI * 72.0;
         let height_pts = (page.height as f32) / DPI * 72.0;
         // Scale the image to fill the page
         // The image XObject is drawn in a 1x1 unit space, this scales it to page size
-        let content = format!("q\n{:.2} 0 0 {:.2} 0 0 cm\n/Im{} Do\nQ\n", width_pts, height_pts, page_idx);
-        
+        let content = format!(
+            "q\n{:.2} 0 0 {:.2} 0 0 cm\n/Im{} Do\nQ\n",
+            width_pts, height_pts, page_idx
+        );
+
         let content_obj_num = 3 + pages.len() * 2 + page_idx;
         object_offsets.push(pdf_data.len());
         pdf_data.extend_from_slice(format!("{} 0 obj\n", content_obj_num).as_bytes());
@@ -287,7 +296,7 @@ fn write_pdf<W: Write>(writer: &mut W, pages: &[PageData]) -> Result<()> {
         pdf_data.extend_from_slice(b"\nendstream\n");
         pdf_data.extend_from_slice(b"endobj\n");
     }
-    
+
     // Cross-reference table
     let xref_offset = pdf_data.len();
     let num_objects = object_offsets.len();
@@ -297,7 +306,7 @@ fn write_pdf<W: Write>(writer: &mut W, pages: &[PageData]) -> Result<()> {
     for offset in &object_offsets {
         pdf_data.extend_from_slice(format!("{:010} 00000 n \n", offset).as_bytes());
     }
-    
+
     // Trailer
     pdf_data.extend_from_slice(b"trailer\n");
     pdf_data.extend_from_slice(b"<<\n");
@@ -307,8 +316,10 @@ fn write_pdf<W: Write>(writer: &mut W, pages: &[PageData]) -> Result<()> {
     pdf_data.extend_from_slice(b"startxref\n");
     pdf_data.extend_from_slice(format!("{}\n", xref_offset).as_bytes());
     pdf_data.extend_from_slice(b"%%EOF\n");
-    
-    writer.write_all(&pdf_data).context("Failed to write PDF data")?;
+
+    writer
+        .write_all(&pdf_data)
+        .context("Failed to write PDF data")?;
     Ok(())
 }
 
@@ -425,41 +436,57 @@ mod tests {
     #[test]
     fn test_pdf_generation() {
         use std::io::Cursor;
-        
+
         // Create a simple test page with red pixels
         let width = 10u16;
         let height = 10u16;
         let mut pixels = Vec::new();
-        
+
         // Fill with red pixels (RGB = 255, 0, 0)
         for _ in 0..(width * height) {
             pixels.push(255); // R
-            pixels.push(0);   // G
-            pixels.push(0);   // B
+            pixels.push(0); // G
+            pixels.push(0); // B
         }
-        
-        let page = PageData { width, height, pixels };
+
+        let page = PageData {
+            width,
+            height,
+            pixels,
+        };
         let pages = vec![page];
-        
+
         // Write PDF to a buffer
         let mut buffer = Cursor::new(Vec::new());
         let result = write_pdf(buffer.get_mut(), &pages);
         assert!(result.is_ok(), "PDF generation should succeed");
-        
+
         // Verify PDF structure
         let pdf_data = buffer.into_inner();
         assert!(!pdf_data.is_empty(), "PDF should have data");
-        
+
         // Check PDF header
         let header = String::from_utf8_lossy(&pdf_data[0..9]);
-        assert!(header.starts_with("%PDF-1.4"), "PDF should have correct header");
-        
+        assert!(
+            header.starts_with("%PDF-1.4"),
+            "PDF should have correct header"
+        );
+
         // Check PDF trailer
         let trailer = String::from_utf8_lossy(&pdf_data);
         assert!(trailer.contains("%%EOF"), "PDF should have EOF marker");
-        assert!(trailer.contains("/Type /Catalog"), "PDF should have catalog");
+        assert!(
+            trailer.contains("/Type /Catalog"),
+            "PDF should have catalog"
+        );
         assert!(trailer.contains("/Type /Pages"), "PDF should have pages");
-        assert!(trailer.contains("/Type /Page"), "PDF should have page object");
-        assert!(trailer.contains("/Type /XObject"), "PDF should have image object");
+        assert!(
+            trailer.contains("/Type /Page"),
+            "PDF should have page object"
+        );
+        assert!(
+            trailer.contains("/Type /XObject"),
+            "PDF should have image object"
+        );
     }
 }
