@@ -27,6 +27,8 @@ constructs PDFs following the PDF 1.4 specification.
 
 ## Usage
 
+### Command-line Interface
+
 Basic conversion:
 ```bash
 dangerzone-rs --input unsafe.pdf --output safe.pdf
@@ -37,15 +39,55 @@ With OCR:
 dangerzone-rs --input unsafe.pdf --output safe.pdf --ocr
 ```
 
-**Note on OCR**: 
+**Note on OCR**:
 
 - On **macOS**, the tool uses PDFKit's built-in `saveTextFromOCROption` for
   OCR, which is faster and doesn't require additional dependencies.
-- On **other platforms**, no OCR is done.
+- On **other platforms**, OCR can be enabled by installing `ocrmypdf`:
+  ```bash
+  pip install ocrmypdf
+  ```
 
-## Prerequisites
+### Python Library
 
-- Rust (for building from source)
+Use dangerzone-rs as a Python library to programmatically convert documents.
+
+#### Installation
+
+As this is not published to PyPI, here is how to run it locally:
+
+```bash
+cargo build --release
+uv tool install maturin
+uv venv
+uv pip install -e . # this will install 
+pip install dangerzone-rs
+```
+
+#### Basic Usage
+
+Run the demos like this:
+
+```bash
+source .venv/bin/activate
+python demo/demo.py
+```
+
+#### Requirements
+
+- **Podman**: The container runtime (required for document conversion)
+- **Dangerzone container image**:
+  ```bash
+  podman pull ghcr.io/freedomofpress/dangerzone/v1
+  ```
+- **ocrmypdf** (optional): For OCR on non-macOS platforms:
+  ```bash
+  pip install ocrmypdf
+  ```
+
+## Prerequisites (CLI)
+
+- Rust (for building the binary from source)
 - Podman
 - Dangerzone container image:
   ```bash
@@ -54,7 +96,9 @@ dangerzone-rs --input unsafe.pdf --output safe.pdf --ocr
 
 ## Installation
 
-### Download pre-built binaries
+### CLI Binary
+
+#### Download pre-built binaries
 
 Download the latest release for your platform from the [Releases
 page](https://github.com/almet/dangerzone-rs/releases).
@@ -65,10 +109,11 @@ Available platforms:
 - macOS (Intel x86_64, Apple Silicon ARM64)
 - Windows (x86_64)
 
-### Build from Source
+#### Build from Source
 
 ```bash
 cargo build --release
+./target/release/dangerzone-rs --input unsafe.pdf --output safe.pdf
 ```
 
 ## How it works
