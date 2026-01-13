@@ -54,14 +54,13 @@ Use dangerzone-rs as a Python library to programmatically convert documents.
 
 #### Installation
 
-As this is not published to PyPI, here is how to run it locally:
+As this is not published to PyPI, here is how to install it locally:
 
 ```bash
-cargo build --release
-uv tool install maturin
 uv venv
-uv pip install -e . # this will install 
-pip install dangerzone-rs
+source .venv/bin/activate
+uv tool install maturin
+maturin develop --features python
 ```
 
 #### Basic Usage
@@ -69,7 +68,6 @@ pip install dangerzone-rs
 Run the demos like this:
 
 ```bash
-source .venv/bin/activate
 python demo/demo.py
 ```
 
@@ -114,6 +112,25 @@ Available platforms:
 ```bash
 cargo build --release
 ./target/release/dangerzone-rs --input unsafe.pdf --output safe.pdf
+```
+
+#### Cross-compilation
+
+You can build for all supported platforms from a Linux machine:
+
+```bash
+# Linux x86_64 (native)
+cargo build --release --target x86_64-unknown-linux-gnu
+
+# Linux ARM64 (requires cross: cargo install cross)
+cross build --release --target aarch64-unknown-linux-gnu
+
+# macOS (requires zig and cargo-zigbuild: cargo install cargo-zigbuild)
+cargo zigbuild --release --target x86_64-apple-darwin
+cargo zigbuild --release --target aarch64-apple-darwin
+
+# Windows (requires cross: cargo install cross)
+cross build --release --target x86_64-pc-windows-gnu
 ```
 
 ## How it works
