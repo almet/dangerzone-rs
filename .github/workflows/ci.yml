@@ -61,8 +61,14 @@ jobs:
         # Test that the binary can show help
         ./target/release/dangerzone-rs --help
         
-        # Test that the binary shows error with missing arguments (should exit with non-zero)
-        if ./target/release/dangerzone-rs 2>&1; then
-          echo "ERROR: Binary should fail with missing arguments"
+        # Test that the binary correctly fails with missing arguments
+        # We expect a non-zero exit code
+        set +e
+        ./target/release/dangerzone-rs 2>&1 > /dev/null
+        EXIT_CODE=$?
+        set -e
+        if [ $EXIT_CODE -eq 0 ]; then
+          echo "ERROR: Binary should fail with missing arguments but succeeded"
           exit 1
         fi
+        echo "Binary correctly failed with exit code $EXIT_CODE"
