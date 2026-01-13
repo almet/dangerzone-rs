@@ -44,12 +44,11 @@ jobs:
             artifact_name: dangerzone-rs
             asset_name: dangerzone-rs-macos-aarch64
 
-          # Windows x86_64 (using cross on Linux)
-          - os: ubuntu-latest
-            target: x86_64-pc-windows-gnu
+          # Windows x86_64
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
             artifact_name: dangerzone-rs.exe
             asset_name: dangerzone-rs-windows-x86_64.exe
-            use_cross: true
 
     steps:
       - name: Checkout code
@@ -83,8 +82,8 @@ jobs:
         if: ${{ !matrix.use_cross }}
         run: cargo build --release --target ${{ matrix.target }}
 
-      - name: Strip binary (native builds only)
-        if: ${{ !matrix.use_cross }}
+      - name: Strip binary (Linux and macOS only)
+        if: ${{ !matrix.use_cross && runner.os != 'Windows' }}
         run: |
           strip target/${{ matrix.target }}/release/${{ matrix.artifact_name }}
 

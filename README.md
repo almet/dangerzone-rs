@@ -116,7 +116,7 @@ cargo build --release
 
 #### Cross-compilation
 
-You can build for all supported platforms from a Linux machine:
+You can build for most platforms from a Linux machine:
 
 ```bash
 # Linux x86_64 (native)
@@ -132,6 +132,9 @@ cargo zigbuild --release --target aarch64-apple-darwin
 # Windows (requires cross: cargo install cross)
 cross build --release --target x86_64-pc-windows-gnu
 ```
+
+Note: The CI builds Windows using MSVC on `windows-latest` for better compatibility.
+The GNU target above works for local development.
 
 ## How it works
 
