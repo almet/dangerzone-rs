@@ -64,7 +64,7 @@ jobs:
         # Test that the binary correctly fails with missing arguments
         # We expect a non-zero exit code
         set +e
-        ./target/release/dangerzone-rs 2>&1 > /dev/null
+        ./target/release/dangerzone-rs > /dev/null 2>&1
         EXIT_CODE=$?
         set -e
         if [ $EXIT_CODE -eq 0 ]; then
