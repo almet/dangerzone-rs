@@ -5,7 +5,7 @@ edition = "2021"
 
 [lib]
 name = "dangerzone_rs"
-crate-type = ["rlib"]
+crate-type = ["cdylib", "rlib"]
 
 [[bin]]
 name = "dangerzone-rs"
